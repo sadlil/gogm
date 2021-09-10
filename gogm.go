@@ -168,7 +168,7 @@ func (g *Gogm) initDriver() error {
 			var err error
 			certPool, err = x509.SystemCertPool()
 			if err != nil {
-				return fmt.Errorf("failed to get system cert pool")
+				return fmt.Errorf("failed to get system cert pool, %w", err)
 			}
 		} else {
 			certPool = x509.NewCertPool()
@@ -183,7 +183,6 @@ func (g *Gogm) initDriver() error {
 			certPool.AppendCertsFromPEM(bytes)
 		}
 	}
-
 
 	neoConfig := func(neoConf *neo4j.Config) {
 		if g.config.EnableDriverLogs {

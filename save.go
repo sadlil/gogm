@@ -116,6 +116,15 @@ func saveDepth(gogm *Gogm, obj interface{}, depth int) neo4j.TransactionWork {
 			return nil, fmt.Errorf("failed to calculate relationships to delete, %w", err)
 		}
 
+		gogm.logger.Debug(fmt.Sprintf("detected %v relationship deletions", len(dels)))
+		gogm.logger.Debug("---start del printing---")
+		if len(dels) != 0 {
+			for id, del := range dels {
+				gogm.logger.Debug(fmt.Sprintf("node(%v) deleting rels to %v", id, del))
+			}
+		}
+		gogm.logger.Debug("---end del printing---")
+
 		//fix the cur rels and write them to their perspective nodes
 		for ptr, val := range nodeRef {
 			graphId, ok := nodeIdRef[ptr]
@@ -136,14 +145,14 @@ func saveDepth(gogm *Gogm, obj interface{}, depth int) neo4j.TransactionWork {
 		}
 
 		if len(dels) != 0 {
-			err := removeRelations(tx, dels)
+			err := removeRelations(gogm, tx, dels)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		if len(relations) != 0 {
-			err := relateNodes(tx, relations, nodeIdRef)
+			err := relateNodes(gogm, tx, relations, nodeIdRef)
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +163,7 @@ func saveDepth(gogm *Gogm, obj interface{}, depth int) neo4j.TransactionWork {
 }
 
 // relateNodes connects nodes together using edge config
-func relateNodes(transaction neo4j.Transaction, relations map[string][]*relCreate, lookup map[uintptr]int64) error {
+func relateNodes(gogm *Gogm, transaction neo4j.Transaction, relations map[string][]*relCreate, lookup map[uintptr]int64) error {
 	if relations == nil || len(relations) == 0 {
 		return errors.New("relations can not be nil or empty")
 	}
@@ -241,6 +250,12 @@ func relateNodes(transaction neo4j.Transaction, relations map[string][]*relCreat
 			Cypher("SET rel += row.props").
 			ToCypher()
 
+		if gogm.config.EnableLogParams {
+			gogm.logger.Debug(fmt.Sprintf("in remove relations -- running [%s] with params (%v)", cyp, params))
+		} else {
+			gogm.logger.Debug(fmt.Sprintf("in remove relations -- running [%s] omitting params due to config", cyp))
+		}
+
 		res, err := transaction.Run(cyp, map[string]interface{}{
 			"rows": params,
 		})
@@ -255,7 +270,7 @@ func relateNodes(transaction neo4j.Transaction, relations map[string][]*relCreat
 }
 
 // removes relationships between specified nodes
-func removeRelations(transaction neo4j.Transaction, dels map[int64][]int64) error {
+func removeRelations(gogm *Gogm, transaction neo4j.Transaction, dels map[int64][]int64) error {
 	if dels == nil || len(dels) == 0 {
 		return nil
 	}
@@ -286,6 +301,11 @@ func removeRelations(transaction neo4j.Transaction, dels map[int64][]int64) erro
 		return err
 	}
 
+	if gogm.config.EnableLogParams {
+		gogm.logger.Debug(fmt.Sprintf("in remove relations -- running [%s] with params (%v)", cyq, params))
+	} else {
+		gogm.logger.Debug(fmt.Sprintf("in remove relations -- running [%s] omitting params due to config", cyq))
+	}
 	res, err := transaction.Run(cyq, map[string]interface{}{
 		"rows": params,
 	})
