@@ -264,6 +264,14 @@ func relateNodes(gogm *Gogm, transaction neo4j.Transaction, relations map[string
 		} else if err = res.Err(); err != nil {
 			return fmt.Errorf("failed to relate nodes %w", res.Err())
 		}
+
+		summary, err := res.Consume()
+		if err != nil {
+			return fmt.Errorf("failed to consume, %w", err)
+		}
+
+		relsCreated := summary.Counters().RelationshipsCreated()
+		gogm.logger.Debug(fmt.Sprintf("created %v relationships", relsCreated))
 	}
 
 	return nil
@@ -314,7 +322,14 @@ func removeRelations(gogm *Gogm, transaction neo4j.Transaction, dels map[int64][
 	} else if err = res.Err(); err != nil {
 		return fmt.Errorf("%s: %w", err.Error(), ErrInternal)
 	}
-	//todo sanity check to make sure the affects worked
+
+	summary, err := res.Consume()
+	if err != nil {
+		return fmt.Errorf("failed to consumer result, %w", err)
+	}
+
+	relsDeleted := summary.Counters().RelationshipsDeleted()
+	gogm.logger.Debug(fmt.Sprintf("deleted %v rels (from neo)", relsDeleted))
 
 	return nil
 }
