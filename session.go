@@ -237,13 +237,16 @@ func (s *Session) LoadDepthFilterPagination(respObj interface{}, id string, dept
 		}
 
 		query = query.
-			OrderBy(dsl.OrderByConfig{
+			Skip(pagination.LimitPerPage * pagination.PageNumber).
+			Limit(pagination.LimitPerPage)
+
+		if len(pagination.OrderByVarName) > 0 && len(pagination.OrderByField) > 0 {
+			query = query.OrderBy(dsl.OrderByConfig{
 				Name:   pagination.OrderByVarName,
 				Member: pagination.OrderByField,
 				Desc:   pagination.OrderByDesc,
-			}).
-			Skip(pagination.LimitPerPage * pagination.PageNumber).
-			Limit(pagination.LimitPerPage)
+			})
+		}
 	}
 
 	if params == nil {

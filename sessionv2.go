@@ -387,13 +387,16 @@ func (s *SessionV2Impl) LoadAllDepthFilterPagination(ctx context.Context, respOb
 		}
 
 		query = query.
-			OrderBy(dsl.OrderByConfig{
+			Skip(pagination.LimitPerPage * pagination.PageNumber).
+			Limit(pagination.LimitPerPage)
+
+		if len(pagination.OrderByVarName) > 0 && len(pagination.OrderByField) > 0 {
+			query = query.OrderBy(dsl.OrderByConfig{
 				Name:   pagination.OrderByVarName,
 				Member: pagination.OrderByField,
 				Desc:   pagination.OrderByDesc,
-			}).
-			Skip(pagination.LimitPerPage * pagination.PageNumber).
-			Limit(pagination.LimitPerPage)
+			})
+		}
 	}
 
 	cyp, err := query.ToCypher()
