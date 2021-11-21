@@ -23,13 +23,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/opentracing/opentracing-go"
 	"reflect"
 	"strings"
 	"time"
 
 	dsl "github.com/mindstand/go-cypherdsl"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/opentracing/opentracing-go"
 )
 
 type SessionV2Impl struct {
@@ -263,13 +263,18 @@ func (s *SessionV2Impl) LoadDepthFilterPagination(ctx context.Context, respObj, 
 		}
 
 		query = query.
-			OrderBy(dsl.OrderByConfig{
+			Skip(pagination.LimitPerPage * pagination.PageNumber).
+			Limit(pagination.LimitPerPage)
+
+		// Set Order by only if Name and Member are set, if we only need
+		// limit and skip with the pagination, this breaks the query.
+		if pagination.OrderByVarName != "" && pagination.OrderByField != "" {
+			query.OrderBy(dsl.OrderByConfig{
 				Name:   pagination.OrderByVarName,
 				Member: pagination.OrderByField,
 				Desc:   pagination.OrderByDesc,
-			}).
-			Skip(pagination.LimitPerPage * pagination.PageNumber).
-			Limit(pagination.LimitPerPage)
+			})
+		}
 	}
 
 	if params == nil {
